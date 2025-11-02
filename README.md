@@ -1,4 +1,4 @@
-# 気圧データ処理パイプライン
+# NOAA GFS気圧データ 等圧線ベクタータイル＆terrainRGBタイル変換ツール
 
 NOAA Global Forecast System（GFS）の気圧データを取得し、各種タイル形式に変換するためのスクリプトです。
 
