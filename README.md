@@ -4,12 +4,32 @@ NOAA Global Forecast System（GFS）の気圧データを取得し、各種タ�
 
 ## 機能
 
+以下の順でパイプライン実行します。
+
 1. **データ取得** (`01_fetch_prmsl.sh`): GFSから海面気圧データ（PRMSL）をダウンロード・抽出
 2. **GeoTiff変換** (`02_create_geotiff.sh`): GRIB2ファイルをGeoTiffに変換
-3. **等圧線作成** (`03_create_isobar.sh`): 等圧線ベクタータイルを作成(4hPa毎)
-4. **TerrainRGB作成** (`03_create_prmsl_terrainRGB.sh`): 気圧データをTerrainRGB形式のラスタータイルに変換
+3. **等圧線作成** (`03_create_isobar.sh`): GeoTiffから等圧線ベクタータイルを作成(4hPa毎)
+4. **TerrainRGB作成** (`03_create_prmsl_terrainRGB.sh`): GeoTiffをTerrainRGB形式のラスタータイルに変換
 
 ## 使用方法
+
+### パイプライン実行
+
+`run_pipeline.sh`を使用して全ステップまたは特定のステップを一括実行できます：
+
+```bash
+# 全ステップ実行（今日のデータ、0-23時間先）
+./run_pipeline.sh
+
+# 特定の日付と時間範囲で全ステップ実行
+./run_pipeline.sh 20251101 0 12
+
+# 特定のステップのみ実行
+./run_pipeline.sh 20251101 0 12 fetch    # データ取得のみ
+./run_pipeline.sh 20251101 0 12 geotiff  # GeoTiff作成のみ
+./run_pipeline.sh 20251101 0 12 isobar   # 等圧線作成のみ
+./run_pipeline.sh 20251101 0 12 terrainrgb # TerrainRGB作成のみ
+```
 
 ### 個別スクリプト実行
 
@@ -37,24 +57,6 @@ NOAA Global Forecast System（GFS）の気圧データを取得し、各種タ�
 
 # 2025年11月1日のデータを0-12時間先まで取得
 ./01_fetch_prmsl.sh 20251101 0 12
-```
-
-### パイプライン実行
-
-`run_pipeline.sh`を使用して全ステップまたは特定のステップを一括実行できます：
-
-```bash
-# 全ステップ実行（今日のデータ、0-23時間先）
-./run_pipeline.sh
-
-# 特定の日付と時間範囲で全ステップ実行
-./run_pipeline.sh 20251101 0 12
-
-# 特定のステップのみ実行
-./run_pipeline.sh 20251101 0 12 fetch    # データ取得のみ
-./run_pipeline.sh 20251101 0 12 geotiff  # GeoTiff作成のみ
-./run_pipeline.sh 20251101 0 12 isobar   # 等圧線作成のみ
-./run_pipeline.sh 20251101 0 12 terrainrgb # TerrainRGB作成のみ
 ```
 
 ## 引数の詳細
@@ -113,12 +115,69 @@ terrainrgb/      # TerrainRGBラスタータイル
 ```
 
 ## 等圧線ベクタータイル仕様
+- ズームレベル
+  - 0-4
 - レイヤ名
   - isobar
 - 属性
   - prmsl
     - 海面換算大気圧（hPa）。4hPa毎に格納。
 
+## terrainRGBタイル仕様
+- ズームレベル
+  - 0-4
+- 単位
+  - hPa単位の気圧をエンコード
+- MapLibre GLのcolor-reliefスタイル例
+  ```json
+  {
+    "version": 8,
+    "sources": {
+      "prmsl_000": {
+        "type": "raster-dem",
+        "url": "pmtiles:///atmosphere-pressure-map/data/prmsl_hpa_terrainrgb_20251101_000.pmtiles",
+        "minzoom": 0,
+        "maxzoom": 4,
+        "attribution": "<a href='https://registry.opendata.aws/noaa-gfs-bdp-pds/' target='_blank'>Processed from NOAA Global Forecast System (GFS) data accessed on 20251101</a>"
+      }
+    },
+    "glyphs": "font/{fontstack}/{range}.pbf",
+    "layers": [
+      {
+        "id": "pressure-relief_000",
+        "type": "color-relief",
+        "source": "prmsl_000",
+        "paint": {
+          "color-relief-color": [
+            "interpolate",
+            ["linear"],
+            ["elevation"],
+            980,
+            "#2166ac",
+            990,
+            "#4393c3",
+            1000,
+            "#92c5de",
+            1010,
+            "#d1e5f0",
+            1013,
+            "#f7f7f7",
+            1016,
+            "#fddbc7",
+            1020,
+            "#f4a582",
+            1030,
+            "#d6604d",
+            1040,
+            "#b2182b"
+          ],
+          "color-relief-opacity": 0.6
+        },
+        "minzoom": 0
+      }
+    ]
+  }
+  ```
 ## 注意事項
 
 - GFSデータは通常384時間先（16日先）まで利用可能です。
